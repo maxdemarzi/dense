@@ -23,6 +23,7 @@ Example request:
 * Accept: application/json
 * Content-Type: application/json
 
+<pre>
     {
       "other" : "http://localhost:7474/db/data/node/340",
       "type" : "LOVES",
@@ -31,13 +32,15 @@ Example request:
         "foo" : "bar"
       }
     }
+</pre>	
 	
 Example response:
 
 * 201: Created
 * Content-Type: application/json
 * Location: http://localhost:7474/db/data/relationship/207	
-	
+
+<pre>	
     {
       "extensions" : {
       },
@@ -52,6 +55,8 @@ Example response:
         "foo" : "bar"
       }
     }	
+</pre>
+
 
 Performance Test
 ----------------
