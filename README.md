@@ -4,6 +4,8 @@ Dense Nodes
 Dealing with Dense Nodes in any database can be difficult.  
 This is an attempt to mitigate the problem by fanning out the relationships.
 
+The solution must allow the nodes and relationships to be easily referenced via Cypher.
+
 Description
 -----------
 
