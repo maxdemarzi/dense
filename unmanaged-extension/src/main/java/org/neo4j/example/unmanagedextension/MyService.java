@@ -26,7 +26,7 @@ import java.util.*;
 public class MyService {
 
     private final InputFormat input = new JsonFormat();
-    private static final Integer MAXRELS = 3;
+    private static final Integer MAXRELS = 4;
     private static final String PREFIX = "DENSE_";
 
     @GET
@@ -114,20 +114,19 @@ public class MyService {
                 metaRelationship = Relate(denseNode, metaNode, type, direction);
                 metaRelationship.setProperty("next", metaNode.getId());
                 nextMetaArray.add(metaNode.getId());
-                metaRelationship.setProperty("next_branch", nextMetaArray.toArray(new Long[nextMetaArray.size()]));
+                metaRelationship.setProperty("next_branch", nextMetaArray.toArray(new long[nextMetaArray.size()]));
                 System.out.println("ONLY ONCE: created a new meta Node and Relationship" + metaNode.getId());
             } else {
               metaNode = db.getNodeById((Long) metaRelationship.getProperty("next"));
               metaCount = (Integer) metaNode.getProperty("count");
               branchCount = (Integer) metaNode.getProperty("branch_count");
-                try {
-                    long[] meh = (long[])metaRelationship.getProperty("next_branch");
-                    for(long l : meh) nextMetaArray.add(l);
-                } catch (ClassCastException ex){
-                    nextMetaArray = (List< Long >)Arrays.asList((Long[])metaRelationship.getProperty("next_branch")) ;
-                    System.out.println("wtf");
-                }
-
+              Object meh2 = metaRelationship.getProperty("next_branch");
+              if(meh2 instanceof long[]){
+                  for(long l : (long[])meh2) nextMetaArray.add(l);
+              }
+              if(meh2 instanceof Long[]){
+                  for(Long l : (Long[])meh2) nextMetaArray.add((long)l);
+              }
 
               //long[] meh = (long[])metaRelationship.getProperty("next_branch");
               //for(long l : meh) nextMetaArray.add(l);
