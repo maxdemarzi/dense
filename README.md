@@ -59,9 +59,23 @@ Example response:
     }	
 </pre>
 
+From Webadmin:
+
+    POST /example/service/node/1/dense_relationships {"other" : "http://localhost:7474/db/data/node/2", "type" : "LOVES", "direction" : "INCOMING", "data" : { "foo" : "bar"}}
+
+    START me=node(1)
+    MATCH me<-[:LOVES]-()<-[:DENSE_LOVES*0..5]-loved
+    WHERE NOT HAS(loved.meta)
+    RETURN loved
+
+    START me=node(2)
+    MATCH me-[:DENSE_LOVES*0..5]->()-[:LOVES]-loved
+    WHERE NOT HAS(loved.meta)
+    RETURN loved
+
+
 
 Performance Test
 ----------------
 
 Test read and write performance while writing to a "dense" node.
-

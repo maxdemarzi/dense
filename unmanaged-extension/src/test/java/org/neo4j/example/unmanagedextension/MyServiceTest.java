@@ -1,20 +1,20 @@
 package org.neo4j.example.unmanagedextension;
 
+import com.sun.jersey.api.client.ClientResponse;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectWriter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
-import org.neo4j.graphdb.index.Index;
+import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
 import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import org.neo4j.server.rest.repr.RelationshipRepresentationTest;
 
 public class MyServiceTest {
 
@@ -34,13 +34,10 @@ public class MyServiceTest {
         Transaction tx = db.beginTx();
         try
         {
-            Node personA = createPerson(db, "A");
-            Node personB = createPerson(db, "B");
-            Node personC = createPerson(db, "C");
-            Node personD = createPerson(db, "D");
-            personA.createRelationshipTo(personB, KNOWS);
-            personB.createRelationshipTo(personC, KNOWS);
-            personC.createRelationshipTo(personD, KNOWS);
+            int i;
+            for (i=1; i <= 1000; i++) {
+                createPerson(db, String.valueOf(i));
+            }
             tx.success();
         }
         finally
@@ -50,10 +47,8 @@ public class MyServiceTest {
     }
 
     private Node createPerson(GraphDatabaseService db, String name) {
-        Index<Node> people = db.index().forNodes("people");
         Node node = db.createNode();
         node.setProperty("name", name);
-        people.add(node, "name", name);
         return node;
     }
 
@@ -69,11 +64,37 @@ public class MyServiceTest {
     }
 
     @Test
-    public void shouldQueryDbForFriends() throws IOException {
-        Response response = service.getFriends("B", db);
-        List list = objectMapper.readValue((String) response.getEntity(), List.class);
-        assertEquals(new HashSet<String>(Arrays.asList("A", "C")), new HashSet<String>(list));
+    public void shouldCreateDenseRelationship() throws Exception {
+
+        String jsonString;
+        int i;
+        for (i=1; i <=100; i++) {
+            jsonString = "{\"other\" : \""
+                    + "http://localhost:7474/"
+                    + "node/"
+                    + String.valueOf(i)
+                    + "\", \"type\" : \"LIKES\", "
+                    + "\"direction\" : \"INCOMING\", "
+                    + "\"data\" : {\"foo\" : \"bar\"}}";
+
+            Response response = service.createDenseRelationship(jsonString, 3L,db);
+            System.out.println(response.getStatus());
+            System.out.println(response.getEntity().toString());
+
+            //System.out.println(JsonHelper.jsonToMap((String) response.getEntity()));
+
+            //assertProperRelationshipRepresentation( JsonHelper.jsonToMap( (String) response.getEntity() ) );
+
+          //  Map items = objectMapper.readValue((String) response.getEntity(), Map.class);
+          //  System.out.println(items);
+        }
+        //ObjectWriter writer = objectMapper.writerWithDefaultPrettyPrinter();
+        //Object myObject;
+        //myObject = objectMapper.readValue( json, Object.class );
+       // 42            return writer.writeValueAsString(myObject );
+        //System.out.println(writer.writeValueAsString(objectMapper.readValue(response.getEntity().toString(), Object.class)));
     }
+
 
     public GraphDatabaseService graphdb() {
         return db;

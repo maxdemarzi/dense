@@ -3,21 +3,30 @@ package org.neo4j.example.unmanagedextension;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.cypher.javacompat.ExecutionResult;
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.*;
+import org.neo4j.server.rest.domain.EndNodeNotFoundException;
+import org.neo4j.server.rest.domain.StartNodeNotFoundException;
+import org.neo4j.server.rest.repr.BadInputException;
+import org.neo4j.server.rest.repr.InputFormat;
+import org.neo4j.server.rest.repr.OutputFormat;
+import org.neo4j.server.rest.repr.RelationshipRepresentation;
+import org.neo4j.server.rest.repr.formats.JsonFormat;
+import org.neo4j.server.rest.web.PropertyValueException;
 
-import javax.ws.rs.GET;
+import javax.ws.rs.*;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.net.URI;
+import java.util.*;
 
 @Path("/service")
 public class MyService {
+
+    private final InputFormat input = new JsonFormat();
+    private static final Integer MAXRELS = 5;
+    private static final String PREFIX = "DENSE_";
 
     @GET
     @Path("/helloworld")
@@ -37,5 +46,201 @@ public class MyService {
         }
         ObjectMapper objectMapper = new ObjectMapper();
         return Response.ok().entity(objectMapper.writeValueAsString(friends)).build();
+    }
+
+    @POST
+    @Path("/node/{nodeId}/dense_relationships")
+    @Produces("application/json")
+    public Response createDenseRelationship(String body, @PathParam("nodeId") Long nodeId, @Context GraphDatabaseService db) throws Exception
+    {
+        final OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://localhost/" ), null );
+        Map<String, Object> results = new HashMap<String, Object>();
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        final Map<String, Object> data;
+        final long otherNodeId;
+        RelationshipType type;
+        final Direction direction;
+        final Map<String, Object> properties;
+
+        Integer metaCount;
+        Node denseNode;
+        Node sparseNode;
+        Node metaNode;
+        Node nextMetaNode;
+        Relationship metaRelationship;
+        Relationship createdRelationship = null;
+        RelationshipType metaType;
+        final RelationshipRepresentation result;
+
+        try
+        {
+            data = input.readMap( body );
+            otherNodeId = extractNodeId((String) data.get("other"));
+            type = extractRelationshipType((String) data.get("type"));
+            metaType = extractRelationshipType(PREFIX + (String) data.get("type"));
+            direction = extractDirection((String) data.get("direction"));
+            properties = (Map<String, Object>) data.get( "data" );
+        }
+        catch ( BadInputException e )
+        {
+            return output.badRequest( e );
+        }
+        catch ( ClassCastException e )
+        {
+            return output.badRequest( e );
+        }
+
+        Transaction tx = db.beginTx();
+        try
+        {
+            denseNode = db.getNodeById(nodeId);
+            sparseNode = db.getNodeById(otherNodeId);
+            metaRelationship = denseNode.getSingleRelationship(type, direction);
+
+            // If this is our first time, create a new relationship type meta node and connect via
+            // a new metaRelationship, that points to this new node in the next property.
+            if (metaRelationship == null) {
+                metaNode = db.createNode();
+                metaNode.setProperty("meta", true);
+                metaNode.setProperty("count", 0);
+                metaCount = 0;
+                metaRelationship = Relate(denseNode, metaNode, type, direction);
+                metaRelationship.setProperty("next", metaNode.getId());
+                System.out.println("ONLY ONCE: created a new meta Node and Relationship" + metaNode.getId());
+            } else {
+              metaNode = db.getNodeById((Long) metaRelationship.getProperty("next"));
+              metaCount = (Integer) metaNode.getProperty("count");
+            }
+
+            tx.acquireWriteLock(metaRelationship);
+
+            // If our count is less than the maximum fan out, attach to existing meta node.
+            // Else create a new meta node, and attach to it.
+            if(metaCount < MAXRELS) {
+                tx.acquireWriteLock(metaNode);
+//                Relate(metaNode, sparseNode, metaType, direction);
+                metaNode.setProperty("count", ++metaCount);
+                System.out.println("Count: " + metaCount + " Attached to EXISTING meta node: " + metaNode.getId());
+            } else {
+                metaCount = 1;
+                nextMetaNode = db.createNode();
+                nextMetaNode.setProperty("meta", true);
+                nextMetaNode.setProperty("count", metaCount);
+                Relate(metaNode, nextMetaNode, metaType, direction);
+
+                metaRelationship.setProperty("next", nextMetaNode.getId());
+                metaNode = nextMetaNode;
+                System.out.println("Count: " + metaCount + " Attached to NEW meta node: " + nextMetaNode.getId());
+            }
+
+            createdRelationship = Relate(metaNode, sparseNode, metaType, direction);
+
+            results.put("type", type.name());
+            results.put("self", "http://localhost:7474/db/data/relationship/" + createdRelationship.getId());
+            results.put("property", "http://localhost:7474/db/data/relationship/" + + createdRelationship.getId() + "/properties/{key}");
+            results.put("properties", "http://localhost:7474/db/data/relationship/" + + createdRelationship.getId() + "/properties");
+            if(direction == Direction.INCOMING)
+            {
+                results.put("start", "http://localhost:7474/db/data/" + otherNodeId );
+                results.put("end", "http://localhost:7474/db/data/" + nodeId );
+            }
+            if(direction == Direction.OUTGOING)
+            {
+                results.put("start", "http://localhost:7474/db/data/" + nodeId );
+                results.put("end", "http://localhost:7474/db/data/" + otherNodeId );
+            }
+           // TO-DO: Add Properties for(createdRelationship.)
+
+
+            result = new RelationshipRepresentation( createdRelationship );
+            tx.success();
+        }
+        finally
+        {
+            tx.finish();
+        }
+
+        try
+        {
+            return Response.created(new URI("http://localhost/db/data/relationship/" + createdRelationship.getId())).
+                    entity(objectMapper.writeValueAsString(results)).build();
+        }
+//        catch ( StartNodeNotFoundException e )
+//        {
+//            return output.notFound( e );
+//        }
+//        catch ( EndNodeNotFoundException e )
+//        {
+//            return output.badRequest( e );
+//        }
+        catch ( IllegalArgumentException e)
+        {
+            return output.badRequest( e );
+        }
+//        catch ( PropertyValueException e )
+//        {
+//            return output.badRequest( e );
+//        }
+//        catch ( BadInputException e )
+//        {
+//            return output.badRequest( e );
+//        }
+
+    }
+
+
+    private long extractNodeId( String uri ) throws BadInputException
+    {
+        try
+        {
+            return Long.parseLong( uri.substring( uri.lastIndexOf( "/" ) + 1 ) );
+        }
+        catch ( NumberFormatException ex )
+        {
+            throw new BadInputException( ex );
+        }
+        catch ( NullPointerException ex )
+        {
+            throw new BadInputException( ex );
+        }
+    }
+
+    private Direction extractDirection(String direction) throws BadInputException
+    {
+        switch (Direction.valueOf(direction.toUpperCase())){
+            case INCOMING: return Direction.INCOMING;
+            case OUTGOING: return Direction.OUTGOING;
+            default: throw new BadInputException("Bad Direction: Only INCOMING and OUTGOING are allowed.");
+            }
+
+    }
+
+    private DynamicRelationshipType extractRelationshipType(String type) throws BadInputException
+    {
+        try
+        {
+            return DynamicRelationshipType.withName(type);
+        }
+        catch ( IllegalArgumentException ex)
+        {
+            throw new BadInputException( ex );
+        }
+    }
+
+    private Relationship Relate(Node nodeA, Node nodeB, RelationshipType type, Direction direction) throws BadInputException
+    {
+        try
+        {
+            if (direction == Direction.OUTGOING)  {
+                return nodeA.createRelationshipTo(nodeB, type);
+            } else {
+                return nodeB.createRelationshipTo(nodeA, type);
+            }
+        }
+        catch ( Exception ex )
+        {
+            throw new BadInputException( ex );
+        }
     }
 }
