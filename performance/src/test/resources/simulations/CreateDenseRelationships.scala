@@ -26,13 +26,13 @@ class CreateRelationships extends Simulation {
 
   val rnd = new scala.util.Random
   val chooseRandomNodes = exec((session) => {
-    session.setAttribute("id", rnd.nextInt(100000))
+    session.setAttribute("id", rnd.nextInt(10000000))
   })
 
   val json = "{\"other\" : \"http://localhost:7474/db/data/node/%s\", \"type\" : \"LIKES\", \"direction\" : \"INCOMING\", \"data\" : { \"foo\" : \"bar\"}}".format("${id}")
 
   val scn = scenario("Create Relationships")
-    .during(30) {
+    .during(600) {
     exec(chooseRandomNodes)
       .exec(
       http("create relationships")
@@ -48,7 +48,7 @@ class CreateRelationships extends Simulation {
   val likesPostBody = """{"query": "%s"}""".format(fetchSomeLikes)
 
   val scn2 = scenario("Get Relationships")
-    .during(30) {
+    .during(600) {
       exec(
       http("get relationships")
         .post("/db/data/cypher")
@@ -61,7 +61,7 @@ class CreateRelationships extends Simulation {
 
 
   setUp(
-    scn.users(100).ramp(10).protocolConfig(httpConf),
-    scn2.users(100).ramp(10).protocolConfig(httpConf)
+    scn.users(10).ramp(10).protocolConfig(httpConf),
+    scn2.users(1).protocolConfig(httpConf)
   )
 }

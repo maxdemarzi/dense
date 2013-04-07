@@ -11,9 +11,9 @@ class CreateNodes extends Simulation {
     .baseURL("http://localhost:7474")
     .acceptHeader("application/json")
 
-  val createNode = """{"query": "create me"}"""
+  val createNode = """{"query": "start n=node(0) foreach (x in range(1,1000) : create n={id:x}) return count(*) "}"""
 
-  val scn = scenario("Create Nodes")
+  val scn = scenario("Create 10M Nodes")
     .repeat(1000) {
     exec(
       http("create node")
@@ -26,6 +26,6 @@ class CreateNodes extends Simulation {
 
 
   setUp(
-    scn.users(100).ramp(10).protocolConfig(httpConf)
+    scn.users(10).ramp(10).protocolConfig(httpConf)
   )
 }
