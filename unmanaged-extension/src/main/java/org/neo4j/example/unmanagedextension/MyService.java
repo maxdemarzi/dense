@@ -1,5 +1,6 @@
 package org.neo4j.example.unmanagedextension;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.cypher.javacompat.ExecutionResult;
@@ -25,7 +26,7 @@ import java.util.*;
 public class MyService {
 
     private final InputFormat input = new JsonFormat();
-    private static final Integer MAXRELS = 5;
+    private static final Integer MAXRELS = 3;
     private static final String PREFIX = "DENSE_";
 
     @GET
@@ -64,6 +65,9 @@ public class MyService {
         final Map<String, Object> properties;
 
         Integer metaCount;
+        Integer branchCount;
+        List<Long> nextMetaArray = new ArrayList<Long>();
+        Long nextId;
         Node denseNode;
         Node sparseNode;
         Node metaNode;
@@ -104,13 +108,29 @@ public class MyService {
                 metaNode = db.createNode();
                 metaNode.setProperty("meta", true);
                 metaNode.setProperty("count", 0);
+                metaNode.setProperty("branch_count", 0);
                 metaCount = 0;
+                branchCount = 0;
                 metaRelationship = Relate(denseNode, metaNode, type, direction);
                 metaRelationship.setProperty("next", metaNode.getId());
+                nextMetaArray.add(metaNode.getId());
+                metaRelationship.setProperty("next_branch", nextMetaArray.toArray(new Long[nextMetaArray.size()]));
                 System.out.println("ONLY ONCE: created a new meta Node and Relationship" + metaNode.getId());
             } else {
               metaNode = db.getNodeById((Long) metaRelationship.getProperty("next"));
               metaCount = (Integer) metaNode.getProperty("count");
+              branchCount = (Integer) metaNode.getProperty("branch_count");
+                try {
+                    long[] meh = (long[])metaRelationship.getProperty("next_branch");
+                    for(long l : meh) nextMetaArray.add(l);
+                } catch (ClassCastException ex){
+                    nextMetaArray = (List< Long >)Arrays.asList((Long[])metaRelationship.getProperty("next_branch")) ;
+                    System.out.println("wtf");
+                }
+
+
+              //long[] meh = (long[])metaRelationship.getProperty("next_branch");
+              //for(long l : meh) nextMetaArray.add(l);
             }
 
             tx.acquireWriteLock(metaRelationship);
@@ -119,19 +139,39 @@ public class MyService {
             // Else create a new meta node, and attach to it.
             if(metaCount < MAXRELS) {
                 tx.acquireWriteLock(metaNode);
-//                Relate(metaNode, sparseNode, metaType, direction);
                 metaNode.setProperty("count", ++metaCount);
                 System.out.println("Count: " + metaCount + " Attached to EXISTING meta node: " + metaNode.getId());
             } else {
-                metaCount = 1;
+                if (branchCount < MAXRELS){
+                    ++branchCount;
+                    metaNode.setProperty("branch_count", branchCount);
+                    nextId = nextMetaArray.get(0);
+                    metaNode = db.getNodeById(nextId);
+                } else {
+                    nextMetaArray.remove(0);
+                    nextId = nextMetaArray.get(0);
+                    metaNode = db.getNodeById(nextId);
+                    System.out.println("IMPORTANT! branchCount: " + branchCount + " Attached to EXISTING meta node: " + metaNode.getId());
+                    branchCount = 1;
+                }
+
+                System.out.println(Arrays.toString(nextMetaArray.toArray(new Long[nextMetaArray.size()])));
+
                 nextMetaNode = db.createNode();
                 nextMetaNode.setProperty("meta", true);
-                nextMetaNode.setProperty("count", metaCount);
-                Relate(metaNode, nextMetaNode, metaType, direction);
+                nextMetaNode.setProperty("count", 1);
+                nextMetaNode.setProperty("branch_count", 0);
 
-                metaRelationship.setProperty("next", nextMetaNode.getId());
-                metaNode = nextMetaNode;
-                System.out.println("Count: " + metaCount + " Attached to NEW meta node: " + nextMetaNode.getId());
+                Relate(metaNode, nextMetaNode, metaType, direction);
+                metaNode.setProperty("branch_count", branchCount);
+                //metaRelationship.setProperty("next", nextMetaNode.getId());
+                metaRelationship.setProperty("next", nextId);
+                nextMetaArray.add(nextMetaNode.getId());
+                metaRelationship.setProperty("next_branch", nextMetaArray.toArray(new Long[nextMetaArray.size()]));
+                System.out.println("MetaCount: " + metaCount + "BranchCount: " + branchCount + " Attached to NEW meta node: " + nextMetaNode.getId());
+                //long[] meh = (long[])metaRelationship.getProperty("next_branch");
+                //System.out.println(Arrays.toString(meh));
+
             }
 
             createdRelationship = Relate(metaNode, sparseNode, metaType, direction);
