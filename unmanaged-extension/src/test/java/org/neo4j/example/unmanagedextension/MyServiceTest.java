@@ -59,11 +59,6 @@ public class MyServiceTest {
     }
 
     @Test
-    public void shouldRespondToHelloWorld() {
-        assertEquals("Hello World!", service.helloWorld());
-    }
-
-    @Test
     public void shouldCreateDenseRelationship() throws Exception {
 
         String jsonString;
@@ -77,10 +72,10 @@ public class MyServiceTest {
                     + "\"direction\" : \"INCOMING\", "
                     + "\"data\" : {\"foo\" : \"bar\"}}";
 
-            Response response = service.createDenseRelationship(jsonString, 3L,db);
-            //System.out.println(String.valueOf(i));
+            Response response = service.createDenseRelationship(jsonString, 3L, db);
+            System.out.println(String.valueOf(i));
             //System.out.println(response.getStatus());
-            //System.out.println(response.getEntity().toString());
+            System.out.println(response.getEntity().toString());
 
             //System.out.println(JsonHelper.jsonToMap((String) response.getEntity()));
 
