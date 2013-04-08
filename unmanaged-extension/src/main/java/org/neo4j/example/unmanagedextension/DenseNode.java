@@ -18,7 +18,7 @@ import java.net.URI;
 import java.util.*;
 
 @Path("/service")
-public class MyService {
+public class DenseNode {
 
     private final InputFormat input = new JsonFormat();
     private static final Integer MAXRELS = 100;

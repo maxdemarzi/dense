@@ -103,7 +103,7 @@ Clone it, and in the unmanaged-extension directory run:
 
 You'll want to copy the jar to your neo4j/plugins directory:
 
-    cp unmanaged-extension/target/unmanaged-extension-template-1.0.jar neo4j/plugins/
+    cp unmanaged-extension/target/dense-node-extension-1.0.jar neo4j/plugins/
 
 And add the following to the neo4j/conf/neo4j-server.properties:
 
