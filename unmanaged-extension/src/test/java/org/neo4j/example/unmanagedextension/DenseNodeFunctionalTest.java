@@ -17,7 +17,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class MyServiceFunctionalTest {
+public class DenseNodeFunctionalTest {
 
     public static final Client CLIENT = Client.create();
     public static final String MOUNT_POINT = "/ext";
