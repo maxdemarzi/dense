@@ -91,3 +91,25 @@ When the prompt appears, first run the Create Nodes simulation, and once that is
 10M nodes are created, and these are randomly connected to node 1.
 
 While the imports are running try the cypher queries above, or create a new relationship (with a different type) to node 1 and see how well that responds.
+
+
+To Run
+------
+
+Clone it, and in the unmanaged-extension directory run:
+
+    mvn clean package
+
+
+You'll want to copy the jar to your neo4j/plugins directory:
+
+    cp unmanaged-extension/target/unmanaged-extension-template-1.0.jar neo4j/plugins/
+
+And add the following to the neo4j/conf/neo4j-server.properties:
+
+    org.neo4j.server.thirdparty_jaxrs_classes=org.neo4j.example.unmanagedextension=/example
+
+Start the Neo4j server.
+
+The project includes two Gatling tests which simulate the creation of 10M nodes and connecting them together while executing reads at the same time.
+
