@@ -84,3 +84,10 @@ Performance Test
 ----------------
 
 Test read and write performance while writing to a "dense" node.
+
+Open the project in IntelliJ.  In src/test/scala, right click on Engine and Run that.
+When the prompt appears, first run the Create Nodes simulation, and once that is finished, run the Engine again and choose the Create Relationships simulation.
+
+10M nodes are created, and these are randomly connected to node 1.
+
+While the imports are running try the cypher queries above, or create a new relationship (with a different type) to node 1 and see how well that responds.
