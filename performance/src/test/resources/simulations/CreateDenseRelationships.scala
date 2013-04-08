@@ -32,7 +32,7 @@ class CreateRelationships extends Simulation {
   val json = "{\"other\" : \"http://localhost:7474/db/data/node/%s\", \"type\" : \"LIKES\", \"direction\" : \"INCOMING\", \"data\" : { \"foo\" : \"bar\"}}".format("${id}")
 
   val scn = scenario("Create Relationships")
-    .during(600) {
+    .during(6000) {
     exec(chooseRandomNodes)
       .exec(
       http("create relationships")
@@ -48,7 +48,7 @@ class CreateRelationships extends Simulation {
   val likesPostBody = """{"query": "%s"}""".format(fetchSomeLikes)
 
   val scn2 = scenario("Get Relationships")
-    .repeat(100000) {
+    .during(6000) {
       exec(
       http("get relationships")
         .post("/db/data/cypher")
@@ -58,7 +58,6 @@ class CreateRelationships extends Simulation {
         .check(status.is(200)))
         .pause(1 seconds)
   }
-
 
   setUp(
     scn.users(100).ramp(10).protocolConfig(httpConf),

@@ -78,7 +78,7 @@ public class MyServiceTest {
                     + "\"data\" : {\"foo\" : \"bar\"}}";
 
             Response response = service.createDenseRelationship(jsonString, 3L,db);
-            System.out.println(String.valueOf(i));
+            //System.out.println(String.valueOf(i));
             //System.out.println(response.getStatus());
             //System.out.println(response.getEntity().toString());
 

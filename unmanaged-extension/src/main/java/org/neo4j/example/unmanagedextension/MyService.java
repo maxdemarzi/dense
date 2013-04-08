@@ -26,8 +26,9 @@ import java.util.*;
 public class MyService {
 
     private final InputFormat input = new JsonFormat();
-    private static final Integer MAXRELS = 4;
+    private static final Integer MAXRELS = 100;
     private static final String PREFIX = "DENSE_";
+    ObjectMapper objectMapper = new ObjectMapper();
 
     @GET
     @Path("/helloworld")
@@ -45,7 +46,6 @@ public class MyService {
         for (Map<String, Object> item : result) {
             friends.add((String) item.get("other.name"));
         }
-        ObjectMapper objectMapper = new ObjectMapper();
         return Response.ok().entity(objectMapper.writeValueAsString(friends)).build();
     }
 
@@ -56,7 +56,6 @@ public class MyService {
     {
         final OutputFormat output = new OutputFormat( new JsonFormat(), new URI( "http://localhost/" ), null );
         Map<String, Object> results = new HashMap<String, Object>();
-        ObjectMapper objectMapper = new ObjectMapper();
 
         final Map<String, Object> data;
         final long otherNodeId;
@@ -114,7 +113,7 @@ public class MyService {
                 metaRelationship = Relate(denseNode, metaNode, type, direction);
                 metaRelationship.setProperty("next", metaNode.getId());
                 nextMetaArray.add(metaNode.getId());
-                metaRelationship.setProperty("next_branch", nextMetaArray.toArray(new long[nextMetaArray.size()]));
+                metaRelationship.setProperty("next_branch", nextMetaArray.toArray(new Long[nextMetaArray.size()]));
                 System.out.println("ONLY ONCE: created a new meta Node and Relationship" + metaNode.getId());
             } else {
               metaNode = db.getNodeById((Long) metaRelationship.getProperty("next"));
@@ -139,7 +138,7 @@ public class MyService {
             if(metaCount < MAXRELS) {
                 tx.acquireWriteLock(metaNode);
                 metaNode.setProperty("count", ++metaCount);
-                System.out.println("Count: " + metaCount + " Attached to EXISTING meta node: " + metaNode.getId());
+                //System.out.println("Count: " + metaCount + " Attached to EXISTING meta node: " + metaNode.getId());
             } else {
                 if (branchCount < MAXRELS){
                     ++branchCount;
@@ -150,11 +149,11 @@ public class MyService {
                     nextMetaArray.remove(0);
                     nextId = nextMetaArray.get(0);
                     metaNode = db.getNodeById(nextId);
-                    System.out.println("IMPORTANT! branchCount: " + branchCount + " Attached to EXISTING meta node: " + metaNode.getId());
+                    //System.out.println("IMPORTANT! branchCount: " + branchCount + " Attached to EXISTING meta node: " + metaNode.getId());
                     branchCount = 1;
                 }
 
-                System.out.println(Arrays.toString(nextMetaArray.toArray(new Long[nextMetaArray.size()])));
+                //System.out.println(Arrays.toString(nextMetaArray.toArray(new Long[nextMetaArray.size()])));
 
                 nextMetaNode = db.createNode();
                 nextMetaNode.setProperty("meta", true);
@@ -167,7 +166,7 @@ public class MyService {
                 metaRelationship.setProperty("next", nextId);
                 nextMetaArray.add(nextMetaNode.getId());
                 metaRelationship.setProperty("next_branch", nextMetaArray.toArray(new Long[nextMetaArray.size()]));
-                System.out.println("MetaCount: " + metaCount + "BranchCount: " + branchCount + " Attached to NEW meta node: " + nextMetaNode.getId());
+                //System.out.println("MetaCount: " + metaCount + "BranchCount: " + branchCount + " Attached to NEW meta node: " + nextMetaNode.getId());
                 //long[] meh = (long[])metaRelationship.getProperty("next_branch");
                 //System.out.println(Arrays.toString(meh));
 

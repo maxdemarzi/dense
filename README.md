@@ -61,18 +61,23 @@ Example response:
 
 From Webadmin:
 
-    POST /example/service/node/1/dense_relationships {"other" : "http://localhost:7474/db/data/node/2", "type" : "LOVES", "direction" : "INCOMING", "data" : { "foo" : "bar"}}
 
-    START me=node(1)
-    MATCH me<-[:LOVES]-()<-[:DENSE_LOVES*0..5]-loved
-    WHERE NOT HAS(loved.meta)
-    RETURN loved
+    POST /example/service/node/1/dense_relationships {"other" : "http://localhost:7474/db/data/node/2", "type" : "LIKES", "direction" : "INCOMING", "data" : { "foo" : "bar"}}
+    POST /example/service/node/1/dense_relationships {"other" : "http://localhost:7474/db/data/node/3", "type" : "LIKES", "direction" : "INCOMING", "data" : { "foo" : "bar"}}
+    POST /example/service/node/1/dense_relationships {"other" : "http://localhost:7474/db/data/node/4", "type" : "LIKES", "direction" : "INCOMING", "data" : { "foo" : "bar"}}
+    POST /example/service/node/1/dense_relationships {"other" : "http://localhost:7474/db/data/node/5", "type" : "LIKES", "direction" : "INCOMING", "data" : { "foo" : "bar"}}
+    POST /example/service/node/1/dense_relationships {"other" : "http://localhost:7474/db/data/node/6", "type" : "LIKES", "direction" : "INCOMING", "data" : { "foo" : "bar"}}
+    POST /example/service/node/1/dense_relationships {"other" : "http://localhost:7474/db/data/node/7", "type" : "LIKES", "direction" : "INCOMING", "data" : { "foo" : "bar"}}
+    POST /example/service/node/1/dense_relationships {"other" : "http://localhost:7474/db/data/node/8", "type" : "LIKES", "direction" : "INCOMING", "data" : { "foo" : "bar"}}
+
+	START me=node(1) 
+	MATCH me<-[:LIKES]-()<-[:DENSE_LIKES*0..1]-liked 
+	WHERE NOT HAS(liked.meta) 
+	RETURN COUNT(liked)
 
     START me=node(2)
-    MATCH me-[:DENSE_LOVES*0..5]->()-[:LOVES]-loved
-    WHERE NOT HAS(loved.meta)
+    MATCH me-[:DENSE_LIKES*0..5]->()-[:LIKES]-loved
     RETURN loved
-
 
 
 Performance Test
