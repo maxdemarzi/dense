@@ -16,10 +16,10 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import org.neo4j.server.rest.repr.RelationshipRepresentationTest;
 
-public class MyServiceTest {
+public class DenseNodeTest {
 
     private ImpermanentGraphDatabase db;
-    private MyService service;
+    private DenseNode service;
     private ObjectMapper objectMapper = new ObjectMapper();
     private static final RelationshipType KNOWS = DynamicRelationshipType.withName("KNOWS");
 
@@ -27,7 +27,7 @@ public class MyServiceTest {
     public void setUp() {
         db = new ImpermanentGraphDatabase();
         populateDb(db);
-        service = new MyService();
+        service = new DenseNode();
     }
 
     private void populateDb(GraphDatabaseService db) {
